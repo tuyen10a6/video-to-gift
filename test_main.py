@@ -65,7 +65,7 @@ class VideoToGifAppTests(unittest.IsolatedAsyncioTestCase):
         command = mock_run.call_args.args[0]
         self.assertNotIn("-t", command)
         self.assertIn(
-            "fps=10,scale=480:320:force_original_aspect_ratio=increase,crop=480:320",
+            "fps=8,scale=480:320:force_original_aspect_ratio=increase,crop=480:320",
             command,
         )
 

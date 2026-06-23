@@ -28,7 +28,7 @@ async def video_to_gif(
     file: UploadFile = File(...),
     width: Annotated[int, Form()] = 480,
     height: Annotated[int, Form()] = 320,
-    fps: Annotated[int, Form()] = 10,
+    fps: Annotated[int, Form()] = 8,
     start_time: Annotated[int, Form()] = 0,
     duration: Annotated[int | None, Form()] = None,
 ):
