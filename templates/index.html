@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video to GIF</title>
+  <style>
+    :root {
+      --bg: linear-gradient(135deg, #fff7ed 0%, #ffedd5 45%, #fde68a 100%);
+      --panel: rgba(255, 255, 255, 0.88);
+      --text: #172554;
+      --muted: #475569;
+      --line: rgba(23, 37, 84, 0.12);
+      --primary: #ea580c;
+      --primary-dark: #c2410c;
+      --danger-bg: #fee2e2;
+      --danger-text: #b91c1c;
+      --success-bg: #dcfce7;
+      --success-text: #166534;
+      --shadow: 0 24px 60px rgba(120, 53, 15, 0.18);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      padding: 32px 18px;
+    }
+
+    .shell {
+      max-width: 1080px;
+      margin: 0 auto;
+      display: grid;
+      gap: 24px;
+    }
+
+    .hero,
+    .panel {
+      background: var(--panel);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      padding: 32px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(234, 88, 12, 0.1);
+      color: var(--primary-dark);
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+
+    h1 {
+      margin: 16px 0 10px;
+      font-size: clamp(2.2rem, 4vw, 3.8rem);
+      line-height: 1.05;
+    }
+
+    .lead {
+      margin: 0;
+      max-width: 700px;
+      color: var(--muted);
+      font-size: 1.02rem;
+      line-height: 1.7;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(320px, 400px) minmax(0, 1fr);
+      gap: 24px;
+    }
+
+    .panel {
+      padding: 24px;
+    }
+
+    .panel h2 {
+      margin: 0 0 8px;
+      font-size: 1.35rem;
+    }
+
+    .panel p {
+      margin: 0 0 20px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .upload-form {
+      display: grid;
+      gap: 18px;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+    }
+
+    label {
+      font-weight: 700;
+    }
+
+    input[type="file"] {
+      width: 100%;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px dashed rgba(234, 88, 12, 0.4);
+      background: rgba(255, 255, 255, 0.7);
+      color: var(--text);
+    }
+
+    .defaults {
+      padding: 16px 18px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .defaults strong {
+      color: var(--text);
+    }
+
+    button {
+      border: 0;
+      border-radius: 18px;
+      padding: 15px 20px;
+      background: linear-gradient(135deg, var(--primary) 0%, #f59e0b 100%);
+      color: white;
+      font-weight: 800;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+      box-shadow: 0 16px 30px rgba(234, 88, 12, 0.28);
+    }
+
+    button:hover:enabled {
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      opacity: 0.7;
+      cursor: wait;
+      transform: none;
+    }
+
+    .status {
+      min-height: 64px;
+      padding: 16px 18px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .status.loading::before {
+      content: "";
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      margin-right: 10px;
+      border-radius: 999px;
+      border: 2px solid rgba(234, 88, 12, 0.2);
+      border-top-color: var(--primary);
+      animation: spin 0.8s linear infinite;
+      vertical-align: -2px;
+    }
+
+    .status.error {
+      background: var(--danger-bg);
+      color: var(--danger-text);
+      border-color: rgba(185, 28, 28, 0.18);
+    }
+
+    .status.success {
+      background: var(--success-bg);
+      color: var(--success-text);
+      border-color: rgba(22, 101, 52, 0.18);
+    }
+
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      padding: 18px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.74);
+      border: 1px solid var(--line);
+    }
+
+    .card h3 {
+      margin: 0 0 12px;
+      font-size: 1.05rem;
+    }
+
+    .media-frame {
+      width: 100%;
+      aspect-ratio: 3 / 2;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background:
+        linear-gradient(135deg, rgba(251, 146, 60, 0.14), rgba(14, 116, 144, 0.12)),
+        #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      color: var(--muted);
+      text-align: center;
+      padding: 18px;
+    }
+
+    video,
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .result-actions {
+      display: none;
+      margin-top: 18px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .result-actions.active {
+      display: flex;
+    }
+
+    .result-link,
+    .download-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 16px;
+      border-radius: 16px;
+      text-decoration: none;
+      font-weight: 700;
+      border: 1px solid var(--line);
+      transition: transform 160ms ease, background 160ms ease;
+    }
+
+    .result-link {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.88);
+      min-width: 260px;
+      word-break: break-all;
+    }
+
+    .download-link {
+      color: white;
+      background: linear-gradient(135deg, #0f766e 0%, #0891b2 100%);
+      border-color: transparent;
+    }
+
+    .result-link:hover,
+    .download-link:hover {
+      transform: translateY(-1px);
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @media (max-width: 860px) {
+      .layout,
+      .preview-grid {
+        grid-template-columns: 1fr;
+      }
+
+      body {
+        padding: 18px 14px 28px;
+      }
+
+      .hero,
+      .panel {
+        border-radius: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">FastAPI video-to-gif</div>
+      <h1> MP4 To GIF ngay trên trình duyệt.</h1>
+      <p class="lead">
+        Chọn file <strong>.mp4</strong>, gửi lên API convert, rồi xem ngay GIF kết quả,
+        mở ở tab mới hoặc tải xuống bằng nút riêng. Mặc định hệ thống convert toàn bộ
+        video với kích thước <strong>480x320</strong> và <strong>10 FPS</strong>.
+      </p>
+    </section>
+
+    <section class="layout">
+      <div class="panel">
+      
+
+        <form id="upload-form" class="upload-form">
+          <div class="field">
+            <label for="file-input">Chọn file MP4</label>
+            <input id="file-input" name="file" type="file" accept=".mp4,video/mp4" required>
+          </div>
+
+          <div class="defaults">
+            <strong>Cấu hình mặc định</strong><br>
+            Width: 480px<br>
+            Height: 320px<br>
+            FPS: 10<br>
+            Duration: toàn bộ video
+          </div>
+
+          <button id="submit-button" type="submit">Chuyển đổi sang GIF</button>
+        </form>
+
+        <div id="status-message" class="status">Chưa có tác vụ nào đang chạy.</div>
+      </div>
+
+      <div class="panel">
+        <h2>Kết quả</h2>
+        <p>Preview GIF sẽ xuất hiện tại đây sau khi convert thành công.</p>
+
+        <div class="preview-grid">
+          <article class="card">
+            <h3>Video gốc</h3>
+            <div class="media-frame" id="video-placeholder">Chọn một file MP4 để xem trước video nguồn.</div>
+            <video id="video-preview" class="hidden" controls playsinline></video>
+          </article>
+
+          <article class="card">
+            <h3>GIF preview</h3>
+            <div class="media-frame" id="gif-placeholder">GIF đã convert sẽ được hiển thị trực tiếp tại đây.</div>
+            <img id="gif-preview" class="hidden" alt="GIF preview">
+          </article>
+        </div>
+
+        <div id="result-actions" class="result-actions">
+          <a id="gif-link" class="result-link" href="#" target="_blank" rel="noopener noreferrer">Xem GIF</a>
+          <a id="download-link" class="download-link" href="#" download>Tải xuống</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const form = document.getElementById("upload-form");
+    const fileInput = document.getElementById("file-input");
+    const submitButton = document.getElementById("submit-button");
+    const statusMessage = document.getElementById("status-message");
+    const videoPreview = document.getElementById("video-preview");
+    const gifPreview = document.getElementById("gif-preview");
+    const videoPlaceholder = document.getElementById("video-placeholder");
+    const gifPlaceholder = document.getElementById("gif-placeholder");
+    const resultActions = document.getElementById("result-actions");
+    const gifLink = document.getElementById("gif-link");
+    const downloadLink = document.getElementById("download-link");
+
+    function setStatus(type, message) {
+      statusMessage.className = "status";
+
+      if (type) {
+        statusMessage.classList.add(type);
+      }
+
+      statusMessage.textContent = message;
+    }
+
+    function resetGifResult() {
+      gifPreview.classList.add("hidden");
+      gifPreview.removeAttribute("src");
+      gifPlaceholder.classList.remove("hidden");
+      resultActions.classList.remove("active");
+      gifLink.href = "#";
+      gifLink.textContent = "Xem GIF";
+      downloadLink.href = "#";
+      downloadLink.removeAttribute("download");
+    }
+
+    fileInput.addEventListener("change", () => {
+      const [file] = fileInput.files;
+
+      resetGifResult();
+
+      if (!file) {
+        videoPreview.classList.add("hidden");
+        videoPreview.removeAttribute("src");
+        videoPlaceholder.classList.remove("hidden");
+        setStatus("", "Chưa có tác vụ nào đang chạy.");
+        return;
+      }
+
+      if (!file.name.toLowerCase().endsWith(".mp4")) {
+        fileInput.value = "";
+        videoPreview.classList.add("hidden");
+        videoPreview.removeAttribute("src");
+        videoPlaceholder.classList.remove("hidden");
+        setStatus("error", "Chỉ hỗ trợ file .mp4. Vui lòng chọn đúng định dạng video.");
+        return;
+      }
+
+      const objectUrl = URL.createObjectURL(file);
+      videoPreview.src = objectUrl;
+      videoPreview.classList.remove("hidden");
+      videoPlaceholder.classList.add("hidden");
+      setStatus("", "Video hợp lệ. Nhấn “Chuyển đổi sang GIF” để bắt đầu.");
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const [file] = fileInput.files;
+
+      if (!file) {
+        setStatus("error", "Bạn chưa chọn file MP4 để convert.");
+        return;
+      }
+
+      if (!file.name.toLowerCase().endsWith(".mp4")) {
+        setStatus("error", "Chỉ hỗ trợ file .mp4. Vui lòng chọn đúng định dạng video.");
+        return;
+      }
+
+      submitButton.disabled = true;
+      submitButton.textContent = "Đang xử lý...";
+      setStatus("loading", "Đang upload và convert video sang GIF. Vui lòng chờ một chút.");
+      resetGifResult();
+
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const response = await fetch("/api/video-to-gif", {
+          method: "POST",
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || data.status !== "success" || !data.gif_url) {
+          throw new Error(data.message || "Convert thất bại. Vui lòng thử lại.");
+        }
+
+        const gifUrl = `${data.gif_url}?t=${Date.now()}`;
+        gifPreview.src = gifUrl;
+        gifPreview.classList.remove("hidden");
+        gifPlaceholder.classList.add("hidden");
+
+        gifLink.href = data.gif_url;
+        gifLink.textContent = data.gif_url;
+        downloadLink.href = data.gif_url;
+        downloadLink.setAttribute("download", data.gif_url.split("/").pop());
+        resultActions.classList.add("active");
+
+        setStatus("success", "Convert thành công. Bạn có thể xem trước, mở GIF ở tab mới hoặc tải xuống.");
+      } catch (error) {
+        setStatus("error", error.message || "Có lỗi xảy ra khi gọi API convert.");
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = "Chuyển đổi sang GIF";
+      }
+    });
+  </script>
+</body>
+</html>
