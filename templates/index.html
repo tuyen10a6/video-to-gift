@@ -369,6 +369,7 @@
   </main>
 
   <script>
+    const API_TOKEN = "{{ api_token }}";
     const form = document.getElementById("upload-form");
     const fileInput = document.getElementById("file-input");
     const submitButton = document.getElementById("submit-button");
@@ -457,6 +458,9 @@
 
         const response = await fetch("/api/video-to-gif", {
           method: "POST",
+          headers: {
+            "X-API-Key": API_TOKEN
+          },
           body: formData
         });
 

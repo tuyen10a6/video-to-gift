@@ -3,11 +3,14 @@ import subprocess
 import uuid
 from typing import Annotated
 
-from fastapi import FastAPI, File, Form, UploadFile
+from dotenv import load_dotenv
+from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.requests import Request
+
+load_dotenv()
 
 app = FastAPI(title="Video to GIF API")
 
@@ -16,11 +19,25 @@ os.makedirs("outputs", exist_ok=True)
 
 app.mount("/outputs", StaticFiles(directory="outputs"), name="outputs")
 templates = Jinja2Templates(directory="templates")
+API_TOKEN = os.getenv("TOKEN_API", "")
+
+def verify_api_key(x_api_key: str | None) -> None:
+    if not API_TOKEN:
+        raise HTTPException(status_code=500, detail="TOKEN_API chưa được cấu hình")
+
+    if x_api_key != API_TOKEN:
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
-    return templates.TemplateResponse(request, "index.html")
+    return templates.TemplateResponse(
+        request,
+        "index.html",
+        {
+            "api_token": API_TOKEN,
+        },
+    )
 
 
 @app.post("/api/video-to-gif")
@@ -31,7 +48,10 @@ async def video_to_gif(
     fps: Annotated[int, Form()] = 8,
     start_time: Annotated[int, Form()] = 0,
     duration: Annotated[int | None, Form()] = None,
+    x_api_key: str | None = Header(default=None),
 ):
+    verify_api_key(x_api_key)
+
     if not file.filename or not file.filename.lower().endswith(".mp4"):
         return JSONResponse(
             status_code=400,
