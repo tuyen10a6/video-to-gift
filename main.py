@@ -3,6 +3,7 @@ import subprocess
 import uuid
 from typing import Annotated
 
+import edge_tts
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -94,4 +95,41 @@ async def video_to_gif(
     return {
         "status": "success",
         "gif_url": f"/outputs/{file_id}.gif",
+    }
+
+
+@app.post("/api/text-to-audio")
+async def text_to_audio(
+    text: Annotated[str, Form(...)],
+    voice: Annotated[str, Form()] = "vi-VN-HoaiMyNeural",
+    x_api_key: str | None = Header(default=None),
+):
+    verify_api_key(x_api_key)
+
+    if not text.strip():
+        return JSONResponse(
+            status_code=400,
+            content={"status": "error", "message": "Text không được để trống"},
+        )
+
+    file_id = str(uuid.uuid4())
+    output_path = f"outputs/{file_id}.mp3"
+
+    try:
+        communicate = edge_tts.Communicate(text=text, voice=voice)
+        await communicate.save(output_path)
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "status": "error",
+                "message": "Tạo audio thất bại",
+                "detail": str(e),
+            },
+        )
+
+    return {
+        "status": "success",
+        "audio_url": f"/outputs/{file_id}.mp3",
+        "voice": voice,
     }

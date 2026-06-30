@@ -114,13 +114,27 @@
       font-weight: 700;
     }
 
-    input[type="file"] {
+    input[type="file"],
+    textarea,
+    select {
       width: 100%;
       padding: 14px;
       border-radius: 18px;
-      border: 1px dashed rgba(234, 88, 12, 0.4);
-      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid rgba(23, 37, 84, 0.16);
+      background: rgba(255, 255, 255, 0.78);
       color: var(--text);
+      font: inherit;
+    }
+
+    input[type="file"] {
+      border-style: dashed;
+      border-color: rgba(234, 88, 12, 0.4);
+    }
+
+    textarea {
+      min-height: 180px;
+      resize: vertical;
+      line-height: 1.6;
     }
 
     .defaults {
@@ -230,11 +244,25 @@
     }
 
     video,
-    img {
+    img,
+    audio {
       width: 100%;
+      display: block;
+    }
+
+    video,
+    img {
       height: 100%;
       object-fit: cover;
-      display: block;
+    }
+
+    .audio-box {
+      display: grid;
+      gap: 16px;
+      padding: 18px;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.74);
+      border: 1px solid var(--line);
     }
 
     .result-actions {
@@ -309,18 +337,19 @@
 <body>
   <main class="shell">
     <section class="hero">
-      <div class="eyebrow">FastAPI video-to-gif</div>
-      <h1> MP4 To GIF ngay trên trình duyệt.</h1>
+      <div class="eyebrow">FastAPI media tools</div>
+      <h1>MP4 to GIF và Text to Audio ngay trên trình duyệt.</h1>
       <p class="lead">
-        Chọn file <strong>.mp4</strong>, gửi lên API convert, rồi xem ngay GIF kết quả,
-        mở ở tab mới hoặc tải xuống bằng nút riêng. Mặc định hệ thống convert toàn bộ
-        video với kích thước <strong>480x320</strong> và <strong>8 FPS</strong>.
+        Bạn có thể convert video MP4 sang GIF hoặc nhập văn bản để tạo file MP3.
+        Hai tính năng dùng chung cơ chế xác thực API hiện tại và đều trả file qua
+        thư mục <strong>/outputs</strong>.
       </p>
     </section>
 
     <section class="layout">
       <div class="panel">
-      
+        <h2>Video to GIF</h2>
+        <p>Upload file MP4 để tạo GIF và xem ngay kết quả trên giao diện.</p>
 
         <form id="upload-form" class="upload-form">
           <div class="field">
@@ -343,7 +372,7 @@
       </div>
 
       <div class="panel">
-        <h2>Kết quả</h2>
+        <h2>Kết quả GIF</h2>
         <p>Preview GIF sẽ xuất hiện tại đây sau khi convert thành công.</p>
 
         <div class="preview-grid">
@@ -366,10 +395,52 @@
         </div>
       </div>
     </section>
+
+    <section class="layout">
+      <div class="panel">
+        <h2>Text to Audio</h2>
+        <p>Nhập nội dung văn bản, chọn giọng đọc và tạo MP3 bằng API <code>POST /api/text-to-audio</code>.</p>
+
+        <form id="text-audio-form" class="upload-form">
+          <div class="field">
+            <label for="text-input">Nội dung văn bản</label>
+            <textarea id="text-input" name="text" placeholder="Nhập nội dung cần chuyển thành giọng nói..." required></textarea>
+          </div>
+
+          <div class="field">
+            <label for="voice-select">Giọng đọc</label>
+            <select id="voice-select" name="voice">
+              <option value="vi-VN-HoaiMyNeural">vi-VN-HoaiMyNeural</option>
+              <option value="vi-VN-NamMinhNeural">vi-VN-NamMinhNeural</option>
+            </select>
+          </div>
+
+          <button id="audio-submit-button" type="submit">Tạo Audio</button>
+        </form>
+
+        <div id="audio-status-message" class="status">Chưa có audio nào được tạo.</div>
+      </div>
+
+      <div class="panel">
+        <h2>Kết quả Audio</h2>
+        <p>Nghe thử MP3, mở file trực tiếp hoặc tải file về máy sau khi tạo thành công.</p>
+
+        <div class="audio-box">
+          <div id="audio-placeholder" class="media-frame">File MP3 tạo xong sẽ hiển thị player tại đây.</div>
+          <audio id="audio-player" class="hidden" controls></audio>
+        </div>
+
+        <div id="audio-result-actions" class="result-actions">
+          <a id="audio-link" class="result-link" href="#" target="_blank" rel="noopener noreferrer">Mở MP3</a>
+          <a id="audio-download-link" class="download-link" href="#" download>Tải MP3</a>
+        </div>
+      </div>
+    </section>
   </main>
 
   <script>
     const API_TOKEN = "{{ api_token }}";
+
     const form = document.getElementById("upload-form");
     const fileInput = document.getElementById("file-input");
     const submitButton = document.getElementById("submit-button");
@@ -381,6 +452,17 @@
     const resultActions = document.getElementById("result-actions");
     const gifLink = document.getElementById("gif-link");
     const downloadLink = document.getElementById("download-link");
+
+    const textAudioForm = document.getElementById("text-audio-form");
+    const textInput = document.getElementById("text-input");
+    const voiceSelect = document.getElementById("voice-select");
+    const audioSubmitButton = document.getElementById("audio-submit-button");
+    const audioStatusMessage = document.getElementById("audio-status-message");
+    const audioPlayer = document.getElementById("audio-player");
+    const audioPlaceholder = document.getElementById("audio-placeholder");
+    const audioResultActions = document.getElementById("audio-result-actions");
+    const audioLink = document.getElementById("audio-link");
+    const audioDownloadLink = document.getElementById("audio-download-link");
 
     function setStatus(type, message) {
       statusMessage.className = "status";
@@ -401,6 +483,29 @@
       gifLink.textContent = "Xem GIF";
       downloadLink.href = "#";
       downloadLink.removeAttribute("download");
+    }
+
+    function setAudioStatus(type, message) {
+      audioStatusMessage.className = "status";
+
+      if (type) {
+        audioStatusMessage.classList.add(type);
+      }
+
+      audioStatusMessage.textContent = message;
+    }
+
+    function resetAudioResult() {
+      audioPlayer.pause();
+      audioPlayer.classList.add("hidden");
+      audioPlayer.removeAttribute("src");
+      audioPlayer.load();
+      audioPlaceholder.classList.remove("hidden");
+      audioResultActions.classList.remove("active");
+      audioLink.href = "#";
+      audioLink.textContent = "Mở MP3";
+      audioDownloadLink.href = "#";
+      audioDownloadLink.removeAttribute("download");
     }
 
     fileInput.addEventListener("change", () => {
@@ -487,6 +592,61 @@
       } finally {
         submitButton.disabled = false;
         submitButton.textContent = "Chuyển đổi sang GIF";
+      }
+    });
+
+    textAudioForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+
+      const text = textInput.value.trim();
+      const voice = voiceSelect.value;
+
+      if (!text) {
+        setAudioStatus("error", "Text không được để trống.");
+        return;
+      }
+
+      audioSubmitButton.disabled = true;
+      audioSubmitButton.textContent = "Đang tạo...";
+      setAudioStatus("loading", "Đang tạo file audio từ nội dung văn bản. Vui lòng chờ một chút.");
+      resetAudioResult();
+
+      try {
+        const formData = new FormData();
+        formData.append("text", text);
+        formData.append("voice", voice);
+
+        const response = await fetch("/api/text-to-audio", {
+          method: "POST",
+          headers: {
+            "X-API-Key": API_TOKEN
+          },
+          body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || data.status !== "success" || !data.audio_url) {
+          throw new Error(data.message || "Tạo audio thất bại. Vui lòng thử lại.");
+        }
+
+        const audioUrl = `${data.audio_url}?t=${Date.now()}`;
+        audioPlayer.src = audioUrl;
+        audioPlayer.classList.remove("hidden");
+        audioPlaceholder.classList.add("hidden");
+
+        audioLink.href = data.audio_url;
+        audioLink.textContent = data.audio_url;
+        audioDownloadLink.href = data.audio_url;
+        audioDownloadLink.setAttribute("download", data.audio_url.split("/").pop());
+        audioResultActions.classList.add("active");
+
+        setAudioStatus("success", `Tạo audio thành công với voice ${data.voice}.`);
+      } catch (error) {
+        setAudioStatus("error", error.message || "Có lỗi xảy ra khi gọi API text-to-audio.");
+      } finally {
+        audioSubmitButton.disabled = false;
+        audioSubmitButton.textContent = "Tạo Audio";
       }
     });
   </script>
